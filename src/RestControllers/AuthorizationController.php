@@ -1021,7 +1021,7 @@ class AuthorizationController
         if ($this->grantType === 'authorization_code') {
             // re-populate from saved session cache populated in authorizeUser().
             $ssbc = $this->sessionUserByCode($code);
-            $_SESSION = json_decode($ssbc['session_cache'], true);
+            $_SESSION = isset($ssbc['session_cache']) ? json_decode($ssbc['session_cache'], true) : '';
             $this->logger->debug("AuthorizationController->oauthAuthorizeToken() restored session user from code ", ['session' => $_SESSION]);
         }
         // TODO: explore why we create the request again...

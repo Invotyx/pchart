@@ -159,6 +159,7 @@ $audienceUrl = (new ServerConfig())->getFhirUrl();
                     document.querySelector("#clientSecretID").value = resultJSON.client_secret;
                 })
                 .catch(error => {
+                    console.log(appRegister);
                     console.error(error);
                     let msgText = error.message;
                     if (!msgText) {

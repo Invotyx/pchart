@@ -218,6 +218,7 @@ class FHIRResource implements \JsonSerializable
     /**
      * @return array
      */
+    #[\ReturnTypeWillChange] 
     public function jsonSerialize()
     {
         $json = [];

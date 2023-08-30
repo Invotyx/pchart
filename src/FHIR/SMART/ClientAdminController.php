@@ -29,6 +29,7 @@ use OpenEMR\Core\Header;
 use OpenEMR\Services\PatientService;
 use OpenEMR\Services\TrustedUserService;
 use OpenEMR\Services\UserService;
+use Particle\Validator\Rule\IsArray;
 use Psr\Log\LoggerInterface;
 
 class ClientAdminController
@@ -397,7 +398,7 @@ class ClientAdminController
             'contacts' => [
                 'type' => 'text'
                 ,'label' => xl("Contacts")
-                ,'value' => implode("|", $client->getContacts())
+                ,'value' => is_array($client->getContacts()) ? implode("|", $client->getContacts()) : ""
             ],
             'registrationDate' => [
                 'type' => 'text'

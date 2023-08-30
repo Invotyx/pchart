@@ -164,6 +164,7 @@ class FHIRElement implements \JsonSerializable
     /**
      * @return array
      */
+    #[\ReturnTypeWillChange] 
     public function jsonSerialize()
     {
         $json = [];
