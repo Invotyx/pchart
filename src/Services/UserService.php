@@ -446,11 +446,13 @@ class UserService
             $created_at = new DateTime($result['created_at']);
             $expired_at = $created_at;
             $expired_at->add(new DateInterval('PT10M'));
-            if ((date("Y-m-d H:i:s")) > $expired_at) {
+            if ((date("Y-m-d H:i:s")) > $expired_at->format("Y-m-d H:i:s")) {
                 $validationMessages = [
                 'otp' => ["OTP expired."]
                 ];
                 $processingResult->setValidationMessages($validationMessages);
+                $sqlUpdate = "UPDATE api_otp_verification SET expired_at = 1 WHERE otp = '" . $data["otp"] . "'";
+                $result = sqlQuery($sqlUpdate);
                 return $processingResult;
             }
             $sqlUpdate = "UPDATE api_otp_verification SET expired_at = 1 WHERE otp = '" . $data["otp"] . "'";
