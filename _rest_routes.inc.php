@@ -294,6 +294,7 @@ use OpenEMR\RestControllers\ListRestController;
 use OpenEMR\RestControllers\InsuranceCompanyRestController;
 use OpenEMR\RestControllers\AppointmentRestController;
 use OpenEMR\RestControllers\ConditionRestController;
+use OpenEMR\RestControllers\CredentialsRestController;
 use OpenEMR\RestControllers\ONoteRestController;
 use OpenEMR\RestControllers\DocumentRestController;
 use OpenEMR\RestControllers\DrugRestController;
@@ -311,6 +312,76 @@ use OpenEMR\RestControllers\UserRestController;
 // Note that the api route is only for users role
 //  (there is a mechanism in place to ensure only user role can access the api route)
 RestConfig::$ROUTE_MAP = array(
+    
+    /**
+     *  @OA\Post(
+     *      path="/api/send-otp",
+     *      description="Sending an OTP for verification",
+     *      tags={"standard"},
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\MediaType(
+     *              mediaType="application/json",
+     *              @OA\Schema(
+     *                  @OA\Property(
+     *                      property="email",
+     *                      description="Email or Username of the user",
+     *                      type="string"
+     *                  ),
+     *                  required={"email"},
+     *                  example={
+     *                      "email": "foo@bar.com",
+     *                  }
+     *              )
+     *          )
+     *      ),
+     *      @OA\Response(
+     *          response="200",
+     *          ref="#/components/responses/standard"
+     *      ),
+     *      @OA\Response(
+     *          response="400",
+     *          ref="#/components/responses/badrequest"
+     *      ),
+     *      @OA\Response(
+     *          response="401",
+     *          ref="#/components/responses/unauthorized"
+     *      ),
+     *      security={{"openemr_auth":{}}}
+     * )
+     */
+    "POST /api/send-otp" => function() {
+        RestConfig::authorization_check("admin", "users");
+        $data=(array) (json_decode(file_get_contents("php://input")));
+        $return =(new CredentialsRestController())->sendOtp($data);
+        RestConfig::apiLog($return, $data);
+        return $return;
+    },
+
+    "PUT /api/resetPassword" => function() {
+        RestConfig::authorization_check("admin", "users");
+        $data=(array) (json_decode(file_get_contents("php://input")));
+        $return =(new CredentialsRestController())->resetPassword($data);
+        RestConfig::apiLog($return, $data);
+        return $return;
+    },
+
+    "POST /api/sendDoc-otp" => function() {
+        RestConfig::authorization_check("patient", "demo");
+        $data=(array) (json_decode(file_get_contents("php://input")));
+        $return =(new CredentialsRestController())->sendOtp($data);
+        RestConfig::apiLog($return, $data);
+        return $return;
+    },
+    
+    "PUT /api/resetDocPassword" => function() {
+        RestConfig::authorization_check("patient", "demo");
+        $data=(array) (json_decode(file_get_contents("php://input")));
+        $return =(new CredentialsRestController())->resetPassword($data);
+        RestConfig::apiLog($return, $data);
+        return $return;
+    },
+
     /**
      *  @OA\Get(
      *      path="/api/facility",
