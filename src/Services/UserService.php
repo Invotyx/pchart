@@ -16,10 +16,14 @@
 
 namespace OpenEMR\Services;
 
+use Bcrypt;
+use DateInterval;
+use DateTime;
 use OpenEMR\Common\Database\QueryUtils;
 use OpenEMR\Common\Uuid\UuidRegistry;
 use OpenEMR\Services\Search\FhirSearchWhereClauseBuilder;
 use OpenEMR\Validators\ProcessingResult;
+use phpseclib\Crypt\Hash;
 
 class UserService
 {
@@ -378,5 +382,94 @@ class UserService
             }
         }
         return $row;
+    }
+
+    /**
+     * @return $row the record of the user.
+     */
+    public function getUserByUsernameOrEmail($credential)
+    {
+        return sqlQuery("SELECT * FROM `users` WHERE username= '$credential' OR google_signin_email= '$credential'");
+    }
+
+    /**
+     * @return success message of successful OTP generation.
+     */
+    public function otp_generator($credential)
+    {
+        $processingResult= new ProcessingResult;
+        $user=self::getUserByUsernameOrEmail($credential);
+        if(false && empty($user['google_signin_email']))
+        {
+            $validationMessages = [
+                'email' => ["invalid or nonexisting email" => " value " . $credential ]
+            ];
+            $processingResult->setValidationMessages($validationMessages);
+            return $processingResult;
+        }
+        else
+        {
+            // return $user;
+            $otp = rand(100000, 999999);
+            $processingResult->addData(array(
+                'id'=> $user['id'],
+                'email'=> $user['google_signin_email'],
+                'otp' =>$otp
+            ));
+            // $this->sendVerificationEmail($user['google_signin_email'], $otp);
+            sqlQuery("INSERT INTO api_otp_verification(user_id, otp, expired_at, created_at) VALUES (". $user['id'] . ",". $otp .", 0, '".date("Y-m-d H:i:s")."')");
+
+            return $processingResult;
+        }
+    }
+    public function sendVerificationEmail($email, $otp)
+    {
+        try {
+            Mail::to($email)
+                ->later(Carbon::now()->addSeconds(5), new VerificationEmail($otp));
+            return true;
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
+            return false;
+        }
+    }
+
+    public function resetPasswordUsingOTP($data)
+    {
+        $processingResult= new ProcessingResult;
+        $user=self::getUserByUsernameOrEmail($data['email']);
+        $sqlQuery = "SELECT * FROM api_otp_verification WHERE 
+        user_id=". $user['id'] ." AND otp=". $data["otp"] ." ORDER BY created_at desc LIMIT 1";
+	    $result =sqlQuery($sqlQuery);
+	    if(!empty($result)) {
+            $pass= password_hash($data['password'], PASSWORD_DEFAULT);
+            $created_at = new DateTime($result['created_at']);
+            $expired_at = $created_at;
+            $expired_at->add(new DateInterval('PT10M'));
+            if ((date("Y-m-d H:i:s")) > $expired_at) {
+                $validationMessages = [
+                'otp' => ["OTP expired."]
+                ];
+                $processingResult->setValidationMessages($validationMessages);
+                return $processingResult;
+            }
+            $sqlUpdate = "UPDATE api_otp_verification SET expired_at = 1 WHERE otp = '" . $data["otp"] . "'";
+            $result = sqlQuery($sqlUpdate);
+            sqlQuery("UPDATE users_secure SET password='". $pass ."' where username='". $user['username']."';");
+
+            $processingResult->addData(array(
+                'id'=> $user['id'],
+                'email'=> $user['google_signin_email'],
+                'message' =>'Password Updated Successfully'
+            ));
+            return $processingResult;
+        } else {
+            $validationMessages = [
+                'otp' => ["OTP Invalid!"]
+                ];
+                $processingResult->setValidationMessages($validationMessages);
+                return $processingResult;
+        }		
+        
     }
 }
